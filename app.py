@@ -11,24 +11,24 @@ CODE_UPDATE_MESSAGE = "User updated the coding section"
 llm = ChatOpenAI(model="gpt-4.1")
 
 @tool
-def get_guided_discovery_steps(concept: str) -> str:
-    """Gets expert-curated guided discovery steps for teaching a student the given concept."""
-    prompt = prompts.GUIDED_DISCOVERY_STEPS_PROMPT.format(concept=concept)
+def get_expert_teaching_steps(concept: str) -> str:
+    """Gets expert-curated checklist for teaching a student the given concept."""
+    prompt = prompts.GUIDED_DISCOVERY_STEPS_PROMPT_V2.format(concept=concept)
     response = llm.invoke(prompt)
-    extra_instructions = "NOTICE: Do not show the steps to the student, keep this as your internal knowledge for reference only. Instead, guide the student through the steps one by one. Make sure they can answer the question in each step before moving on to the next."
+    extra_instructions = "NOTICE: Do not show the steps to the student, keep this as your internal knowledge for reference only. Instead, guide the student through the steps one by one. Make sure they can answer the question in each step before moving on to the next. Now use the set_problem_statement to create a concreate coding problem."
     return response.content + "\n" + extra_instructions
 
 @tool
-def set_problem_statement(title: str, description: str, test_case: str = "", visualization: str = "") -> str:
+def set_problem_statement(title: str, description: str, test_case: str = "", ascii_visualization: str = "") -> str:
     """Sets the problem statement, test case, and visualization in the problem section. Use this when introducing a new problem to the student."""
     global problem_statement
     print("Visualization: ")
-    print(visualization)
+    print(ascii_visualization)
     problem_statement = {
         "title": title,
         "description": description,
         "test_case": test_case,
-        "visualization": visualization
+        "visualization": ascii_visualization
     }
     return f"Problem '{title}' has been set."
 
@@ -45,7 +45,7 @@ def get_problem_statement() -> str:
     return f"Title: {problem_statement['title']}\nDescription: {problem_statement['description']}\nTest Case: {problem_statement['test_case']}\nVisualization: {problem_statement['visualization']}"
 
 tool_name_map = {
-    "get_guided_discovery_steps": get_guided_discovery_steps,
+    "get_expert_teaching_steps": get_expert_teaching_steps,
     "set_problem_statement": set_problem_statement,
     "get_coding_section": get_coding_section,
     "get_problem_statement": get_problem_statement
@@ -54,7 +54,7 @@ tools = list(tool_name_map.values())
 llm_with_tools = llm.bind_tools(tools)
 
 messages = [
-    SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. When introducing a new problem or concept, use the set_problem_statement tool to display the problem statement, test case, and visualization in the problem section."),
+    SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. Consult the expert with get_expert_teaching_steps before teaching."),
     AIMessage(content="Greetings! What concept would you like to explore today?")
 ]
 
@@ -84,20 +84,27 @@ class API:
         messages.append(HumanMessage(user_input))
         print_messages(messages)
         ai_msg = llm_with_tools.invoke(messages)
-        print(f"ai\n{ai_msg.content}")
+        print(f"ai\n{ai_msg}")
         messages.append(ai_msg)
-        
-        if ai_msg.tool_calls:
-            for tool_call in ai_msg.tool_calls:
+        tool_calls = [tool_call for tool_call in ai_msg.tool_calls]
+        if tool_calls:
+            tool_index = 0
+            while tool_index < len(tool_calls):
+                tool_call = tool_calls[tool_index]
                 selected_tool = tool_name_map[tool_call["name"].lower()]
                 print(f"Calling tool: {tool_call['name'].lower()} with args: {tool_call['args']}")
                 tool_output = selected_tool.invoke(tool_call["args"])
+                print(f"tool\n{tool_output}")
                 messages.append(ToolMessage(tool_output, tool_call_id=tool_call["id"]))
-            print_messages(messages)
-            final_response = llm_with_tools.invoke(messages)
-            messages.append(final_response)
-            print(f"ai\n{final_response.content}")
-            return final_response.content
+                tool_index += 1
+                if tool_index == len(tool_calls):
+                    response = llm_with_tools.invoke(messages)
+                    print(f"ai\n{response}")
+                    messages.append(response)
+                    if response.tool_calls:
+                        for tool_call in response.tool_calls: tool_calls.append(tool_call)
+                    else:
+                        return response.content
         return ai_msg.content
     
     def update_problem(self, title, description, test_case, visualization):

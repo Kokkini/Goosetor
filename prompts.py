@@ -1,3 +1,10 @@
+GUIDED_DISCOVERY_STEPS_PROMPT_V2 = """
+You are a tutor. Help the student learn the concept {concept} by following these steps and make a checklist:
+1. Motivation: Assign a simple problem yet still requires the concept to be solved. The problem should be close to the student's real life.
+2. List the key ideas the student needs to grasp to understand the concept. This is so that you can make sure the student has understood the concept before moving on to the next step.
+Now write the checklist:
+"""
+
 GUIDED_DISCOVERY_STEPS_PROMPT = """
 How would you teach BFS to a student? Give a list of alternating questions and teachings. Remember to motivate the concept with a familiar problem.
 
