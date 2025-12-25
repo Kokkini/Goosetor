@@ -7,11 +7,11 @@
         body { font-family: system-ui; height: 100vh; display: flex; }
         .left-panel { width: 50%; display: flex; flex-direction: column; border-right: 1px solid #ddd; }
         .right-panel { width: 50%; display: flex; flex-direction: column; }
-        #chat { flex: 1; overflow-y: auto; padding: 20px; }
-        .message { margin-bottom: 15px; }
+        #chat { flex: 1; overflow-y: auto; padding: 20px; user-select: text; }
+        .message { margin-bottom: 15px; user-select: text; }
         .user { text-align: right; }
         .assistant { text-align: left; }
-        .content { display: inline-block; padding: 10px 15px; border-radius: 10px; max-width: 70%; }
+        .content { display: inline-block; padding: 10px 15px; border-radius: 10px; max-width: 70%; user-select: text; }
         .user .content { background: #007bff; color: white; }
         .assistant .content { background: #f0f0f0; }
         .content h1, .content h2, .content h3 { margin: 10px 0 5px 0; }
@@ -33,6 +33,15 @@
         #problem-section { flex: 1; overflow-y: auto; padding: 20px; border-bottom: 1px solid #ddd; }
         #problem-title { font-size: 24px; font-weight: bold; margin-bottom: 15px; }
         #problem-description { margin-bottom: 20px; line-height: 1.6; }
+        #problem-description h1, #problem-description h2, #problem-description h3 { margin: 10px 0 5px 0; }
+        #problem-description p { margin: 5px 0; }
+        #problem-description ul, #problem-description ol { margin: 5px 0; padding-left: 20px; }
+        #problem-description code { background: rgba(0,0,0,0.1); padding: 2px 4px; border-radius: 3px; font-family: 'Courier New', monospace; }
+        #problem-description pre { background: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px; overflow-x: auto; margin: 5px 0; }
+        #problem-description pre code { background: none; padding: 0; }
+        #problem-description blockquote { border-left: 3px solid #ddd; padding-left: 10px; margin: 5px 0; }
+        #problem-description table { border-collapse: collapse; margin: 5px 0; }
+        #problem-description table td, #problem-description table th { border: 1px solid #ddd; padding: 5px; }
         #problem-test-case { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
         #problem-visualization { background: #f8f9fa; padding: 15px; border-radius: 5px; }
         .section-label { font-weight: bold; margin-bottom: 10px; color: #666; font-family: system-ui; }
@@ -99,7 +108,12 @@
         
         function updateProblem(problem) {
             document.getElementById('problem-title').textContent = problem.title || 'No problem selected';
-            document.getElementById('problem-description').textContent = problem.description || 'Start a conversation to get a problem!';
+            const descEl = document.getElementById('problem-description');
+            if (problem.description) {
+                descEl.innerHTML = marked.parse(problem.description);
+            } else {
+                descEl.textContent = 'Start a conversation to get a problem!';
+            }
             
             const testCaseDiv = document.getElementById('problem-test-case');
             const visualizationDiv = document.getElementById('problem-visualization');

@@ -54,7 +54,7 @@ tools = list(tool_name_map.values())
 llm_with_tools = llm.bind_tools(tools)
 
 messages = [
-    SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. When introducing a new problem or concept, use the set_problem_statement tool to display the problem statement, test case, and visualization in the problem section. You have access to tools to check the student's code: get_coding_section (gets full code). When code changes are automatically notified in the chat, review them and provide feedback."),
+    SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. When introducing a new problem or concept, use the set_problem_statement tool to display the problem statement, test case, and visualization in the problem section."),
     AIMessage(content="Greetings! What concept would you like to explore today?")
 ]
 
