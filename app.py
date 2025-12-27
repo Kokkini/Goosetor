@@ -1,22 +1,49 @@
 import webview
 import os
 import difflib
-from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, SystemMessage, BaseMessage
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 import prompts
-
-CODE_UPDATE_MESSAGE = "User updated the coding section"
+from pydantic import BaseModel
+from typing import Literal, List
 
 llm = ChatOpenAI(model="gpt-4.1")
+class TeachingStep(BaseModel):
+    content: str
+    status: Literal["pending", "in_progress", "completed"]
+
+class TeachingStepList(BaseModel):
+    concept: str
+    steps: List[TeachingStep]
+
+CODE_UPDATE_MESSAGE = "User updated the coding section"
+TEACHING_STEPS = TeachingStepList(concept="", steps=[])
+
+def update_teaching_steps(teaching_step_list: TeachingStepList, messages: List[BaseMessage]) -> None:
+    """Update the teaching steps based on the current state of the conversation."""
+    if teaching_step_list.concept == "" or len(teaching_step_list.steps) == 0:
+        return
+    structured_llm = llm.with_structured_output(TeachingStepList)
+    prompt = prompts.UPDATE_TEACHING_STEPS_PROMPT.format(teaching_step_list=teaching_step_list.model_dump_json())
+    messages = messages + [HumanMessage(prompt)]
+    print(f"messages for update_teaching_steps:\n{messages}")
+    response = structured_llm.invoke(messages)
+    teaching_step_list.concept = response.concept
+    teaching_step_list.steps = response.steps
 
 @tool
 def get_expert_teaching_steps(concept: str) -> str:
     """Gets expert-curated checklist for teaching a student the given concept."""
+    global TEACHING_STEPS
     prompt = prompts.GUIDED_DISCOVERY_STEPS_PROMPT_V2.format(concept=concept)
-    response = llm.invoke(prompt)
+    structured_llm = llm.with_structured_output(TeachingStepList)
+    response = structured_llm.invoke(prompt)
+    TEACHING_STEPS.concept = response.concept
+    TEACHING_STEPS.steps = response.steps
+    str_response = response.model_dump_json()
     extra_instructions = "NOTICE: Do not show the steps to the student, keep this as your internal knowledge for reference only. Instead, guide the student through the steps one by one. Make sure they can answer the question in each step before moving on to the next. Now use the set_problem_statement to create a concreate coding problem."
-    return response.content + "\n" + extra_instructions
+    return str_response + "\n" + extra_instructions
 
 @tool
 def set_problem_statement(title: str, description: str, test_case: str = "", ascii_visualization: str = "") -> str:
@@ -54,7 +81,7 @@ tools = list(tool_name_map.values())
 llm_with_tools = llm.bind_tools(tools)
 
 messages = [
-    SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. Consult the expert with get_expert_teaching_steps before teaching."),
+    SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. Consult the expert with get_expert_teaching_steps before teaching any concept."),
     AIMessage(content="Greetings! What concept would you like to explore today?")
 ]
 
@@ -70,7 +97,7 @@ def print_messages(messages):
 
 class API:
     def send_message(self, user_input):
-        global coding_section_content, last_seen_coding_content
+        global coding_section_content, last_seen_coding_content, TEACHING_STEPS
         
         if messages and isinstance(messages[-1], SystemMessage) and messages[-1].content == CODE_UPDATE_MESSAGE:
             old_lines = (last_seen_coding_content or "").splitlines(keepends=True)
@@ -80,7 +107,11 @@ class API:
             if diff_str:
                 messages.append(SystemMessage(f"Code changes:\n{diff_str}"))
                 last_seen_coding_content = coding_section_content
-        
+        num_human_messages = len([message for message in messages if isinstance(message, HumanMessage)])
+        if (num_human_messages + 1) % 5 == 0:
+            update_teaching_steps(TEACHING_STEPS, messages)
+            messages.append(SystemMessage(f"Teaching steps updated: {TEACHING_STEPS.model_dump_json()}"))
+
         messages.append(HumanMessage(user_input))
         print_messages(messages)
         ai_msg = llm_with_tools.invoke(messages)

@@ -1,8 +1,9 @@
 GUIDED_DISCOVERY_STEPS_PROMPT_V2 = """
-You are a tutor. Help the student learn the concept {concept} by following these steps and make a checklist:
-1. Motivation: Assign a simple problem yet still requires the concept to be solved. The problem should be close to the student's real life.
-2. List the key ideas the student needs to grasp to understand the concept. This is so that you can make sure the student has understood the concept before moving on to the next step.
-Now write the checklist:
+You are a tutor. Help the student learn the concept {concept} by following these steps and make a list:
+1. Motivation: Assign a simple problem yet still requires the concept to be solved. The problem should be close to the student's real life. This should be the first step in the teaching step list.
+2. List the key ideas the student needs to grasp to understand the concept. This is so that you can make sure the student has understood the concept before moving on to the next step. Each step here should be a separate step in the teaching step list.
+3. The final step is making sure the student wrote the correct code to solve the problem. This should be the last step in the teaching step list.
+Now write the teaching step list:
 """
 
 GUIDED_DISCOVERY_STEPS_PROMPT = """
@@ -74,3 +75,9 @@ T10. Any setting needing shortest paths or exploring in layers: social network d
 
 How would you teach {concept} to a student? Give a list of alternating questions and teachings. Remember to motivate the concept with a familiar problem.
 """
+
+UPDATE_TEACHING_STEPS_PROMPT = """
+From the conversation so far, write an updated teaching step list. You can add new steps, update the status of existing steps, or remove steps that are no longer relevant.
+This is the current teaching steps:
+{teaching_step_list}
+""".strip()
