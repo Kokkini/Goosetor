@@ -5,13 +5,13 @@ from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, System
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 import prompts
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal, List
 
 llm = ChatOpenAI(model="gpt-4.1")
 class TeachingStep(BaseModel):
     content: str
-    status: Literal["pending", "in_progress", "completed"]
+    status: Literal["not_started", "in_progress", "completed"] = Field(description="The status of the teaching step. 'not_started' means you haven't taught the step yet. 'in_progress' means you are teaching the step. 'completed' means the student has finished the step. In the beginning, all steps should be 'not_started'.")
 
 class TeachingStepList(BaseModel):
     concept: str
@@ -32,8 +32,7 @@ def update_teaching_steps(teaching_step_list: TeachingStepList, messages: List[B
     teaching_step_list.concept = response.concept
     teaching_step_list.steps = response.steps
 
-@tool
-def get_expert_teaching_steps(concept: str) -> str:
+def get_expert_teaching_steps_v1(concept: str) -> str:
     """Gets expert-curated checklist for teaching a student the given concept."""
     global TEACHING_STEPS
     prompt = prompts.GUIDED_DISCOVERY_STEPS_PROMPT_V2.format(concept=concept)
@@ -44,6 +43,24 @@ def get_expert_teaching_steps(concept: str) -> str:
     str_response = response.model_dump_json()
     extra_instructions = "NOTICE: Do not show the steps to the student, keep this as your internal knowledge for reference only. Instead, guide the student through the steps one by one. Make sure they can answer the question in each step before moving on to the next. Now use the set_problem_statement to create a concreate coding problem."
     return str_response + "\n" + extra_instructions
+
+def get_expert_teaching_steps_v2(concept: str) -> str:
+    """Gets expert-curated checklist for teaching a student the given concept."""
+    global TEACHING_STEPS
+    messages = prompts.TEACHING_STEPS_HISTORY + [HumanMessage(content=f"How would you teach {concept}?")]
+    structured_llm = llm.with_structured_output(TeachingStepList)
+    response = structured_llm.invoke(messages)
+    TEACHING_STEPS.concept = response.concept
+    TEACHING_STEPS.steps = response.steps
+    str_response = response.model_dump_json()
+    print(f"Teaching steps: {str_response}", flush=True)
+    extra_instructions = "NOTICE: Do not show the steps to the student, keep this as your internal knowledge for reference only. Instead, guide the student through the steps one by one. Make sure they finish the step before moving on to the next."
+    return str_response + "\n" + extra_instructions
+
+@tool
+def get_expert_teaching_steps(concept: str) -> str:
+    """Gets expert-curated checklist for teaching a student the given concept."""
+    return get_expert_teaching_steps_v2(concept)
 
 @tool
 def set_problem_statement(title: str, description: str, test_case: str = "", ascii_visualization: str = "") -> str:
