@@ -34,16 +34,13 @@ TEACHING_STEPS_HISTORY = [
         **5. Make them generate, not receive**
         Have students predict outcomes, derive formulas, or reason before showing the answer. Generation creates stronger encoding.
 
-        **6. Space it over time**
-        Revisit the concept briefly after days, weeks, and months. Spaced recall beats intensive one-time teaching.
-
-        **7. Anchor it to a mental model**
+        **6. Anchor it to a mental model**
         Teach the “why” and the underlying mechanism, not just procedures. Concepts tied to causal models persist.
 
-        **8. Add emotional or practical relevance**
+        **7. Add emotional or practical relevance**
         Surprise, usefulness, or personal relevance increases retention. “Why this matters” should be concrete.
 
-        **9. Require application under constraints**
+        **8. Require application under constraints**
         Timed problems, real-world constraints, or partial information force deeper processing.
 
         **Simple rule of thumb**
@@ -187,12 +184,6 @@ TEACHING_STEPS_HISTORY = [
         ### One-sentence takeaway students should remember
 
         > Binary search works because each step preserves a guarantee about where the answer is, while cutting the uncertainty in half.
-
-        If you want, I can:
-
-        * Design a 30-minute lesson plan
-        * Show a minimal “never-buggy” implementation
-        * Teach binary search on *answer space* (harder but more powerful)
         """).strip()
     ),
 ]

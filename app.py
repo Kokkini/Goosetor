@@ -20,6 +20,14 @@ class TeachingStepList(BaseModel):
 CODE_UPDATE_MESSAGE = "User updated the coding section"
 TEACHING_STEPS = TeachingStepList(concept="", steps=[])
 
+def print_teaching_steps(teaching_step_list: TeachingStepList) -> None:
+    print("==========TEACHING_STEPS==========")
+    print(f"Concept: {teaching_step_list.concept}")
+    for step in teaching_step_list.steps:
+        print(f"Step: {step.content}")
+        print(f"Status: {step.status}")
+    print("==================================")
+
 def update_teaching_steps(teaching_step_list: TeachingStepList, messages: List[BaseMessage]) -> None:
     """Update the teaching steps based on the current state of the conversation."""
     if teaching_step_list.concept == "" or len(teaching_step_list.steps) == 0:
@@ -31,6 +39,7 @@ def update_teaching_steps(teaching_step_list: TeachingStepList, messages: List[B
     response = structured_llm.invoke(messages)
     teaching_step_list.concept = response.concept
     teaching_step_list.steps = response.steps
+    print_teaching_steps(response)
 
 def get_expert_teaching_steps_v1(concept: str) -> str:
     """Gets expert-curated checklist for teaching a student the given concept."""
@@ -53,7 +62,7 @@ def get_expert_teaching_steps_v2(concept: str) -> str:
     TEACHING_STEPS.concept = response.concept
     TEACHING_STEPS.steps = response.steps
     str_response = response.model_dump_json()
-    print(f"Teaching steps: {str_response}", flush=True)
+    print_teaching_steps(response)
     extra_instructions = "NOTICE: Do not show the steps to the student, keep this as your internal knowledge for reference only. Instead, guide the student through the steps one by one. Make sure they finish the step before moving on to the next."
     return str_response + "\n" + extra_instructions
 
@@ -77,10 +86,10 @@ def set_problem_statement(title: str, description: str, test_case: str = "", asc
     return f"Problem '{title}' has been set."
 
 @tool
-def get_coding_section() -> str:
-    """Gets the current content of the coding section where the student writes code."""
-    global coding_section_content
-    return coding_section_content or ""
+def get_notebook_section() -> str:
+    """Gets the current content of the notebook section where the student writes code, draw pictures, or write notes."""
+    global notebook_section_content
+    return notebook_section_content or ""
 
 @tool
 def get_problem_statement() -> str:
@@ -91,20 +100,20 @@ def get_problem_statement() -> str:
 tool_name_map = {
     "get_expert_teaching_steps": get_expert_teaching_steps,
     "set_problem_statement": set_problem_statement,
-    "get_coding_section": get_coding_section,
+    "get_notebook_section": get_notebook_section,
     "get_problem_statement": get_problem_statement
 }
 tools = list(tool_name_map.values())
 llm_with_tools = llm.bind_tools(tools)
 
 messages = [
-    SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. Consult the expert with get_expert_teaching_steps before teaching any concept."),
+    SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. Consult the expert with get_expert_teaching_steps before teaching any concept. If you want to give an assignment, use the set_problem_statement tool to set the problem statement."),
     AIMessage(content="Greetings! What concept would you like to explore today?")
 ]
 
 problem_statement = {"title": "", "description": "", "test_case": "", "visualization": ""}
-coding_section_content = ""
-last_seen_coding_content = ""
+notebook_section_content = ""
+last_seen_notebook_content = ""
 
 def print_messages(messages):
     print("Messages: ")
@@ -114,16 +123,16 @@ def print_messages(messages):
 
 class API:
     def send_message(self, user_input):
-        global coding_section_content, last_seen_coding_content, TEACHING_STEPS
+        global notebook_section_content, last_seen_notebook_content, TEACHING_STEPS
         
         if messages and isinstance(messages[-1], SystemMessage) and messages[-1].content == CODE_UPDATE_MESSAGE:
-            old_lines = (last_seen_coding_content or "").splitlines(keepends=True)
-            new_lines = (coding_section_content or "").splitlines(keepends=True)
+            old_lines = (last_seen_notebook_content or "").splitlines(keepends=True)
+            new_lines = (notebook_section_content or "").splitlines(keepends=True)
             diff = list(difflib.unified_diff(old_lines, new_lines, fromfile="code", tofile="code", lineterm=""))
             diff_str = "".join(diff)
             if diff_str:
                 messages.append(SystemMessage(f"Code changes:\n{diff_str}"))
-                last_seen_coding_content = coding_section_content
+                last_seen_notebook_content = notebook_section_content
         num_human_messages = len([message for message in messages if isinstance(message, HumanMessage)])
         if (num_human_messages + 1) % 5 == 0:
             update_teaching_steps(TEACHING_STEPS, messages)
@@ -168,21 +177,21 @@ class API:
     def get_problem(self):
         return problem_statement
     
-    def set_coding_section(self, content):
-        global coding_section_content, messages
-        if coding_section_content != content:
-            coding_section_content = content
+    def set_notebook_section(self, content):
+        global notebook_section_content, messages
+        if notebook_section_content != content:
+            notebook_section_content = content
             if not messages or not isinstance(messages[-1], SystemMessage) or messages[-1].content != CODE_UPDATE_MESSAGE:
                 messages.append(SystemMessage(CODE_UPDATE_MESSAGE))
         return "Code updated"
     
-    def get_coding_section(self):
-        global coding_section_content
-        return coding_section_content
+    def get_notebook_section(self):
+        global notebook_section_content
+        return notebook_section_content
 
 if __name__ == '__main__':
     api = API()
     html_path = os.path.join(os.path.dirname(__file__), 'web', 'index.html')
     window = webview.create_window('Goosetor', html_path, js_api=api, width=1200, height=700)
-    webview.start(debug=True)
+    webview.start(debug=False)
 
