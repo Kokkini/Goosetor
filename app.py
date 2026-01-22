@@ -17,7 +17,7 @@ class TeachingStepList(BaseModel):
     concept: str
     steps: List[TeachingStep]
 
-CODE_UPDATE_MESSAGE = "User updated the coding section"
+CODE_UPDATE_MESSAGE = "User updated the notebook"
 TEACHING_STEPS = TeachingStepList(concept="", steps=[])
 
 def print_teaching_steps(teaching_step_list: TeachingStepList) -> None:
@@ -56,7 +56,7 @@ def get_expert_teaching_steps_v1(concept: str) -> str:
 def get_expert_teaching_steps_v2(concept: str) -> str:
     """Gets expert-curated checklist for teaching a student the given concept."""
     global TEACHING_STEPS
-    messages = prompts.TEACHING_STEPS_HISTORY + [HumanMessage(content=f"How would you teach {concept}?")]
+    messages = prompts.TEACHING_STEPS_HISTORY + [HumanMessage(content=f"How would you teach {concept}? Make sure to include a step that assign a practice problem to the student by calling the set_problem_statement tool.")]
     structured_llm = llm.with_structured_output(TeachingStepList)
     response = structured_llm.invoke(messages)
     TEACHING_STEPS.concept = response.concept
@@ -87,7 +87,7 @@ def set_problem_statement(title: str, description: str, test_case: str = "", asc
 
 @tool
 def get_notebook_section() -> str:
-    """Gets the current content of the notebook section where the student writes code, draw pictures, or write notes."""
+    """Gets the current content of the notebook section where the student writes code, draw pictures, or write notes. Call this tool if the content from the diff is unclear"""
     global notebook_section_content
     return notebook_section_content or ""
 
@@ -128,10 +128,10 @@ class API:
         if messages and isinstance(messages[-1], SystemMessage) and messages[-1].content == CODE_UPDATE_MESSAGE:
             old_lines = (last_seen_notebook_content or "").splitlines(keepends=True)
             new_lines = (notebook_section_content or "").splitlines(keepends=True)
-            diff = list(difflib.unified_diff(old_lines, new_lines, fromfile="code", tofile="code", lineterm=""))
+            diff = list(difflib.unified_diff(old_lines, new_lines, fromfile="notebook", tofile="notebook", lineterm=""))
             diff_str = "".join(diff)
             if diff_str:
-                messages.append(SystemMessage(f"Code changes:\n{diff_str}"))
+                messages.append(SystemMessage(f"Notebook changes:\n{diff_str}"))
                 last_seen_notebook_content = notebook_section_content
         num_human_messages = len([message for message in messages if isinstance(message, HumanMessage)])
         if (num_human_messages + 1) % 5 == 0:
