@@ -13,7 +13,7 @@
         .user { text-align: right; }
         .assistant { text-align: left; }
         .content { display: inline-block; padding: 10px 15px; border-radius: 10px; max-width: 70%; -webkit-user-select: text; user-select: text; }
-        .user .content { background: #007bff; color: white; }
+        .user .content { background: #007bff; color: white; text-align: left; }
         .assistant .content { background: #f0f0f0; }
         .content h1, .content h2, .content h3 { margin: 10px 0 5px 0; }
         .content p { margin: 5px 0; }
@@ -126,7 +126,12 @@
             div.className = 'message ' + (isUser ? 'user' : 'assistant');
             const contentDiv = document.createElement('div');
             contentDiv.className = 'content';
-            contentDiv.innerHTML = marked.parse(text);
+            if (isUser) {
+                contentDiv.style.whiteSpace = 'pre-wrap';
+                contentDiv.textContent = text;
+            } else {
+                contentDiv.innerHTML = marked.parse(text);
+            }
             div.appendChild(contentDiv);
             chat.appendChild(div);
             chat.scrollTop = chat.scrollHeight;
