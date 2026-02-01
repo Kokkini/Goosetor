@@ -108,7 +108,12 @@ tools = list(tool_name_map.values())
 llm_with_tools = llm.bind_tools(tools)
 
 STARTING_MESSAGES = [
-    SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. Consult the expert with get_expert_teaching_steps before teaching any concept. If you want to give an assignment, use the set_problem_statement tool to set the problem statement."),
+    SystemMessage(content=dedent("""
+        You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. 
+        You are an expert at giving constructive feedback. That means:
+        - Timely correction: You always give corrections to misunderstandings and errors right after the student makes them.
+        - Supportive framing: Feedback focuses on improvement rather than judgment.
+        Consult the expert with get_expert_teaching_steps before teaching any concept. If you want to give an assignment, use the set_problem_statement tool to set the problem statement.""")),
     AIMessage(content="Greetings! What concept would you like to explore today?")
 ]
 
@@ -139,7 +144,7 @@ class API:
         num_human_messages = len([message for message in messages if isinstance(message, HumanMessage)])
         if num_human_messages % 3 == 1:
             messages.append(SystemMessage(dedent("""
-                Reminder: If there are key ideas that the student needs to remember or take-home messages, write the important part of the message in **bold**. Examples of good bold messages: Kinetic energy is the energy an object has **due to its motion**. An engine is a machine that **converts energy into mechanical work**.
+                Reminder: If there are key ideas or take-home messages, write the important part of the message in **bold**. Examples of good bold messages: Kinetic energy is the energy an object has **due to its motion**. An engine is a machine that **converts energy into mechanical work**.
             """).strip()))
         if (num_human_messages + 1) % 5 == 0:
             update_teaching_steps(TEACHING_STEPS, messages)
