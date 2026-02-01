@@ -31,7 +31,8 @@
         #message-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
         #send-btn { padding: 10px 20px; margin-left: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
         #problem-section { flex: 1; overflow-y: auto; padding: 20px; border-bottom: 1px solid #ddd; }
-        #problem-title { font-size: 24px; font-weight: bold; margin-bottom: 15px; }
+        #problem-title { font-size: 24px; font-weight: bold; }
+        #problem-section > .label-with-tooltip { margin-bottom: 15px; }
         #problem-description { margin-bottom: 20px; line-height: 1.6; }
         #problem-description h1, #problem-description h2, #problem-description h3 { margin: 10px 0 5px 0; }
         #problem-description p { margin: 5px 0; }
@@ -49,6 +50,13 @@
         #visualization-content { white-space: pre-wrap; font-family: 'Courier New', monospace; }
         #coding-section { flex: 1; display: flex; flex-direction: column; padding: 20px; }
         #coding-label { font-weight: bold; margin-bottom: 10px; color: #666; }
+        .label-with-tooltip { display: inline-flex; align-items: center; gap: 6px; }
+        .tooltip-wrap { position: relative; display: inline-flex; align-items: center; }
+        .tooltip-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; min-width: 16px; min-height: 16px; border-radius: 50%; background: #ccc; color: #333; font-size: 11px; font-weight: bold; cursor: help; line-height: 1; }
+        .tooltip-icon:hover { background: #999; color: #fff; }
+        .tooltip-text { visibility: hidden; position: absolute; left: 50%; transform: translateX(-50%); bottom: 100%; margin-bottom: 6px; padding: 6px 10px; background: #333; color: #fff; font-size: 12px; font-weight: normal; white-space: nowrap; border-radius: 4px; z-index: 10; }
+        .tooltip-text::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -4px; border: 4px solid transparent; border-top-color: #333; }
+        .tooltip-wrap:hover .tooltip-text { visibility: visible; }
         .code-container { flex: 1; display: flex; border: 1px solid #ddd; border-radius: 5px; overflow: hidden; }
         #line-numbers { background: #f8f9fa; padding: 10px 5px; font-family: 'Courier New', monospace; font-size: 14px; color: #666; text-align: right; user-select: none; overflow-y: auto; border-right: 1px solid #ddd; white-space: pre; }
         #code-input { flex: 1; padding: 10px; font-family: 'Courier New', monospace; font-size: 14px; border: none; resize: none; outline: none; }
@@ -64,7 +72,13 @@
     </div>
     <div class="right-panel">
         <div id="problem-section">
-            <div id="problem-title">No problem selected</div>
+            <div class="label-with-tooltip">
+                <span id="problem-title">Practice Problem</span>
+                <span class="tooltip-wrap">
+                    <span class="tooltip-icon" aria-label="Info">?</span>
+                    <span class="tooltip-text">The AI tutor will asign a practice problem after it establishes the concept.</span>
+                </span>
+            </div>
             <div id="problem-description">Start a conversation to get a problem!</div>
             <div id="problem-test-case" style="display: none;">
                 <div class="section-label">Test Case:</div>
@@ -76,10 +90,16 @@
             </div>
         </div>
         <div id="coding-section">
-            <div id="coding-label">Notebook:</div>
+            <div id="coding-label" class="label-with-tooltip">
+                Notebook
+                <span class="tooltip-wrap">
+                    <span class="tooltip-icon" aria-label="Info">?</span>
+                    <span class="tooltip-text">The AI tutor can read this section to provide feedback. You can write your solution here and simply says "Done" in the chat.</span>
+                </span>
+            </div>
             <div class="code-container">
                 <div id="line-numbers"></div>
-                <textarea id="code-input" placeholder="Write your code or notes here..."></textarea>
+                <textarea id="code-input" placeholder="Write your solution for the problem here..."></textarea>
             </div>
         </div>
     </div>
@@ -107,7 +127,7 @@
         }
         
         function updateProblem(problem) {
-            document.getElementById('problem-title').textContent = problem.title || 'No problem selected';
+            document.getElementById('problem-title').textContent = (problem.title || 'Practice Problem');
             const descEl = document.getElementById('problem-description');
             if (problem.description) {
                 descEl.innerHTML = marked.parse(problem.description);
