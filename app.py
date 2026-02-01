@@ -7,6 +7,7 @@ from langchain_core.tools import tool
 import prompts
 from pydantic import BaseModel, Field
 from typing import Literal, List
+from textwrap import dedent
 
 llm = ChatOpenAI(model="gpt-4.1")
 class TeachingStep(BaseModel):
@@ -34,9 +35,9 @@ def update_teaching_steps(teaching_step_list: TeachingStepList, messages: List[B
         return
     structured_llm = llm.with_structured_output(TeachingStepList)
     prompt = prompts.UPDATE_TEACHING_STEPS_PROMPT.format(teaching_step_list=teaching_step_list.model_dump_json())
-    messages = messages + [HumanMessage(prompt)]
-    print(f"messages for update_teaching_steps:\n{messages}")
-    response = structured_llm.invoke(messages)
+    temp_messages = messages + [HumanMessage(prompt)]
+    print(f"messages for update_teaching_steps:\n{temp_messages}")
+    response = structured_llm.invoke(temp_messages)
     teaching_step_list.concept = response.concept
     teaching_step_list.steps = response.steps
     print_teaching_steps(response)
@@ -106,10 +107,12 @@ tool_name_map = {
 tools = list(tool_name_map.values())
 llm_with_tools = llm.bind_tools(tools)
 
-messages = [
+STARTING_MESSAGES = [
     SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. Consult the expert with get_expert_teaching_steps before teaching any concept. If you want to give an assignment, use the set_problem_statement tool to set the problem statement."),
     AIMessage(content="Greetings! What concept would you like to explore today?")
 ]
+
+messages = STARTING_MESSAGES.copy()
 
 problem_statement = {"title": "", "description": "", "test_case": "", "visualization": ""}
 notebook_section_content = ""
@@ -134,6 +137,10 @@ class API:
                 messages.append(SystemMessage(f"Notebook changes:\n{diff_str}"))
                 last_seen_notebook_content = notebook_section_content
         num_human_messages = len([message for message in messages if isinstance(message, HumanMessage)])
+        if num_human_messages % 3 == 1:
+            messages.append(SystemMessage(dedent("""
+                Reminder: If there are key ideas that the student needs to remember or take-home messages, write the important part of the message in **bold**. Examples of good bold messages: Kinetic energy is the energy an object has **due to its motion**. An engine is a machine that **converts energy into mechanical work**.
+            """).strip()))
         if (num_human_messages + 1) % 5 == 0:
             update_teaching_steps(TEACHING_STEPS, messages)
             messages.append(SystemMessage(f"Teaching steps updated: {TEACHING_STEPS.model_dump_json()}"))
@@ -191,10 +198,7 @@ class API:
 
     def new_session(self):
         global messages, problem_statement, notebook_section_content, last_seen_notebook_content, TEACHING_STEPS
-        messages = [
-            SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. Consult the expert with get_expert_teaching_steps before teaching any concept. If you want to give an assignment, use the set_problem_statement tool to set the problem statement."),
-            AIMessage(content="Greetings! What concept would you like to explore today?")
-        ]
+        messages = STARTING_MESSAGES.copy()
         problem_statement = {"title": "", "description": "", "test_case": "", "visualization": ""}
         notebook_section_content = ""
         last_seen_notebook_content = ""
