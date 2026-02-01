@@ -189,6 +189,18 @@ class API:
         global notebook_section_content
         return notebook_section_content
 
+    def new_session(self):
+        global messages, problem_statement, notebook_section_content, last_seen_notebook_content, TEACHING_STEPS
+        messages = [
+            SystemMessage(content="You are a tutor who wants to help students learn concepts by guiding them to derive the concept on their own. Consult the expert with get_expert_teaching_steps before teaching any concept. If you want to give an assignment, use the set_problem_statement tool to set the problem statement."),
+            AIMessage(content="Greetings! What concept would you like to explore today?")
+        ]
+        problem_statement = {"title": "", "description": "", "test_case": "", "visualization": ""}
+        notebook_section_content = ""
+        last_seen_notebook_content = ""
+        TEACHING_STEPS = TeachingStepList(concept="", steps=[])
+        return "Session cleared"
+
 if __name__ == '__main__':
     api = API()
     html_path = os.path.join(os.path.dirname(__file__), 'web', 'index.html')

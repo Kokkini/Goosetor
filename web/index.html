@@ -7,6 +7,7 @@
         body { font-family: system-ui; height: 100vh; display: flex; }
         .left-panel { width: 50%; display: flex; flex-direction: column; border-right: 1px solid #ddd; }
         .right-panel { width: 50%; display: flex; flex-direction: column; }
+        #chat-header { padding: 10px 20px; border-bottom: 1px solid #ddd; flex-shrink: 0; }
         #chat { flex: 1; overflow-y: auto; padding: 20px; -webkit-user-select: text; user-select: text; }
         .message { margin-bottom: 15px; -webkit-user-select: text; user-select: text; }
         .user { text-align: right; }
@@ -28,8 +29,10 @@
         .content table { border-collapse: collapse; margin: 5px 0; }
         .content table td, .content table th { border: 1px solid #ddd; padding: 5px; }
         #input-area { display: flex; align-items: flex-end; padding: 15px; border-top: 1px solid #ddd; }
-        #message-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: none; overflow-y: auto; min-height: 40px; max-height: 200px; font-family: inherit; font-size: inherit; }
+        #message-input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: none; overflow-y: hidden; min-height: 40px; max-height: 200px; font-family: inherit; font-size: inherit; }
         #send-btn { padding: 10px 20px; margin-left: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #new-session-btn { padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #new-session-btn:hover { background: #218838; }
         #problem-section { flex: 1; overflow-y: auto; padding: 20px; border-bottom: 1px solid #ddd; -webkit-user-select: text; user-select: text; }
         #problem-title { font-size: 24px; font-weight: bold; -webkit-user-select: text; user-select: text; }
         #problem-section > .label-with-tooltip { margin-bottom: 15px; }
@@ -64,6 +67,9 @@
 </head>
 <body>
     <div class="left-panel">
+        <div id="chat-header">
+            <button id="new-session-btn" onclick="newSession()">New session</button>
+        </div>
         <div id="chat"></div>
         <div id="input-area">
             <textarea id="message-input" placeholder="Type your message..." rows="1"></textarea>
@@ -126,6 +132,26 @@
             chat.scrollTop = chat.scrollHeight;
         }
         
+        function resetToNewSession() {
+            const chat = document.getElementById('chat');
+            chat.innerHTML = '';
+            addMessage('Greetings! What concept would you like to explore today?', false);
+            updateProblem({ title: '', description: '', test_case: '', visualization: '' });
+            document.getElementById('code-input').value = '';
+            updateLineNumbers();
+        }
+
+        function newSession() {
+            api = getAPI();
+            if (!api) {
+                console.error('API not available');
+                return;
+            }
+            api.new_session().then(() => {
+                resetToNewSession();
+            });
+        }
+
         function updateProblem(problem) {
             document.getElementById('problem-title').textContent = (problem.title || 'Practice Problem');
             const descEl = document.getElementById('problem-description');
@@ -186,7 +212,9 @@
         function resizeMessageInput() {
             const ta = document.getElementById('message-input');
             ta.style.height = '0';
-            ta.style.height = Math.min(ta.scrollHeight, MESSAGE_INPUT_MAX_HEIGHT) + 'px';
+            const contentHeight = Math.min(ta.scrollHeight, MESSAGE_INPUT_MAX_HEIGHT);
+            ta.style.height = contentHeight + 'px';
+            ta.style.overflowY = ta.scrollHeight > MESSAGE_INPUT_MAX_HEIGHT ? 'auto' : 'hidden';
         }
         
         document.getElementById('message-input').addEventListener('input', resizeMessageInput);
